@@ -11,6 +11,13 @@ import numpy as np
 import finalprojectutils as util
 
 # I WILL BE USING THE GRID COORDINATES FROM (0,0) TO (8,8)
+
+FOV_DEG = 90                               
+HALF_FOV_RAD = np.deg2rad(FOV_DEG / 2)     # ±45 degrees
+MAX_STOP_DIST = 0.6                        
+DANGER_COLOR = "red"  # color of obstacle
+
+
 def update(obstacle):
     """
     Needs to get done
@@ -545,6 +552,37 @@ def trace_path(goal_node_coord,state_dict):
     print(f"path_list: {path_list}")
     return path_list
 
+
+def obstacle_is_dangerous(color, angle_rad, distance_m):
+    """
+    Decide whether this obstacle should cause the robot to stop.
+    """
+    in_fov = abs(angle_rad) <= HALF_FOV_RAD
+    in_range = distance_m <= MAX_STOP_DIST
+    is_color = (color == DANGER_COLOR)
+    return in_fov and in_range and is_color
+
+def update_stop_flag(sim, obstacle_info):
+    """
+    Sets 'stopFlag' in CoppeliaSim:
+      1 -> STOP
+      0 -> GO
+    Returns:
+      danger (bool)
+    """
+    
+    if obstacle_info is None:
+        sim.setInt32Signal('stopFlag', 0)
+        return False
+
+    color, angle_rad, distance_m = obstacle_info
+    danger = obstacle_is_dangerous(color, angle_rad, distance_m)
+    sim.setInt32Signal('stopFlag', 1 if danger else 0)
+    return danger
+
+
+
+
 if __name__ == '__main__':
     
     
@@ -694,4 +732,5 @@ if __name__ == '__main__':
     path_in_world_coords_xyz = np.hstack((path_in_world_coords_xy,np.zeros((path_in_world_coords_xy.shape[0],1))))
     coppelia_path = util.generate_path_from_trace(sim, path_in_world_coords_xyz)
     trackpoint = sim.getObjectHandle("/track_point")
+
     util.execute_path(coppelia_path,sim,trackpoint,robot,thresh=0.1)
