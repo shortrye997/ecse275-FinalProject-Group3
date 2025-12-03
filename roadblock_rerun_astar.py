@@ -20,6 +20,10 @@ def encounter_roadblock_and_replan(obstacle, state_dict, sim, robot, worldmap, n
 
     Returns: path_list if found, otherwise None.
     """
+     # Process only roadblocks (red obstacles)
+    if obstacle.get('color', '') != 'red':
+        print('obstacle color not red, ignoring')
+        return None
     # get robot pose (pos, orient, yaw)
     try:
         robot_pos = sim.getObjectPosition(robot, sim.handle_world)
@@ -120,4 +124,5 @@ def encounter_roadblock_and_replan(obstacle, state_dict, sim, robot, worldmap, n
     # sensor_obs = {'color':'red', 'heading':0.0, 'distance':1.0}  # heading relative to robot (radians)
     # new_path = encounter_roadblock_and_replan(sensor_obs, state_dict, sim, robot, worldmap)
     # if new_path is not None:
+
     #     print('Replanned path after sensor obstacle:', new_path)
