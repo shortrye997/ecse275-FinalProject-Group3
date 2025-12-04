@@ -39,7 +39,7 @@ def process_next_node(state_dict):
     Returns:
     path_list : list or None
         The traced path as a list of coordinates if the goal node is found. Returns None if the goal is not found during this step.
-    '''
+    """
     
     path_list = None
     goal_bool = None
@@ -389,7 +389,7 @@ def get_path_points(sim, num_iterations=5000, inflation_amt=2):
     #
     blocked_edges = set()
 
-     state_dict = {'open_set':open_set,
+    state_dict = {'open_set':open_set,
                   'explored_set':explored_set,
                   'parent_table': parent_table_coord,
                   'world_map': worldmap, # stores the states of the node (whether start (3), goal (2), obstacle (1) or open space (0) )
@@ -443,5 +443,6 @@ if __name__ == '__main__':
     trackpoint = sim.getObjectHandle("/track_point")
     robot = sim.getObjectHandle("/Pure_Robot/Dummy")
     util.execute_path(coppelia_path,sim,trackpoint,robot,thresh=0.1)
+
 
 
