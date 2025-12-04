@@ -73,6 +73,6 @@ Here are the obstacle courses created for the demo:
 
 
 ### Conclusion
-Overall, our project aims to replicate one of the many challenges that self-driving cars face. By utilizing various concepts explored in this class, particularly A-Star and Robot Vision, we built a simulation that represents a car traveling around a grid of roads while interacting with and taking account of various obstacles along the way. Our multiple enviornments represent increasingly complex and realistic enviornments for our robot to navigate through. Further improvements into the project would be to fix the robot's movement stability as well as greater
+Overall, our project aims to replicate one of the many challenges that self-driving cars face. By utilizing various concepts explored in this class, particularly A-Star and Robot Vision, we built a simulation that represents a car traveling around a grid of roads while interacting with and taking account of various obstacles along the way. Our multiple enviornments represent increasingly complex and realistic enviornments for our robot to navigate through. Further improvements into the project would be to fix the robot's movement stability as well as greater consistancy when interacting with obstacles. 
 
 
