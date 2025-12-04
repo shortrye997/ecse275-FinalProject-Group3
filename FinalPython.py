@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Nov 25 00:04:54 2025
+Self-Driving Smart Car 
+ECSE 275 Final Project
+December 12/4/2025
 
-@author: ched0
+@author: Ryan Shorter, Joshua Kim, Yechan Kim, Peyten Hargraves
 """
 
 import coppeliasim_zmqremoteapi_client as zmq
@@ -1031,4 +1033,5 @@ if __name__ == '__main__':
     # trackpoint = sim.getObjectHandle("/track_point")
     # util.execute_path(coppelia_path,sim,trackpoint,robot,thresh=0.1)
     
+
     astar(worldmap)
