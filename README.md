@@ -6,12 +6,13 @@
     - Created and arranged obstacles in roadmap simulation in multiple different scenes
     - Developed logic for vehicle's interaction with obstacles
     - Programmed path-planning to reroute A-Star accounting for new obstacles
+  - Project write up
 + Joshua Kim:
   - Sensor/Vehicle Logic
     - Implemented sensor data to determine relevancy of obstacles
     - Controlled robot reaction and response to changes in environment
     - Experimented with varying measurable robot-vision thresholds
-  - Project Write up
+  - Project write up
 + Peyten Hargraves:
   - Sensor Implementation
     - Programmed LiDAR to collect angle and distance data of obstacles
@@ -73,6 +74,6 @@ Here are the obstacle courses created for the demo:
 
 
 ### Conclusion
-Overall, our project aims to replicate one of the many challenges that self-driving cars face. By utilizing various concepts explored in this class, particularly A-Star and Robot Vision, we built a simulation that represents a car traveling around a grid of roads while interacting with and taking account of various obstacles along the way. Our multiple enviornments represent increasingly complex and realistic enviornments for our robot to navigate through. Further improvements into the project would be to fix the robot's movement stability as well as greater consistancy when interacting with obstacles. 
+Overall, our project aims to replicate one of the many challenges that self-driving cars face. By utilizing various concepts explored in this class, particularly A-Star and Robot Vision, we built a simulation that represents a car traveling around a grid of roads while interacting with and taking account of various obstacles along the way. Our multiple environment represent increasingly complex and realistic environment for our robot to navigate through. Further improvements into the project would be to fix the robot's movement stability as well as greater consistency when interacting with obstacles. 
 
 
