@@ -92,29 +92,21 @@ def get_camera_image(sim, camera_handle):
 def detect_color_blobs(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
     
-    # Red mask (two ranges)
-    red_mask1 = cv2.inRange(hsv, np.array([0,100,100]), np.array([10,255,255]))
-    red_mask2 = cv2.inRange(hsv, np.array([160,100,100]), np.array([179,255,255]))
-    red_mask = cv2.bitwise_or(red_mask1, red_mask2)
-    
-    masks = {
-        "red": red_mask,
-        "green": cv2.inRange(hsv, np.array([40,50,50]), np.array([80,255,255])),
-        "blue": cv2.inRange(hsv, np.array([100,50,50]), np.array([140,255,255]))
+    color_ranges = {
+        "red": [((0, 100, 100), (10, 255, 255)), ((160, 100, 100), (179, 255, 255))],
+        "green": [((40, 50, 50), (80, 255, 255))],
+        "blue": [((100, 50, 50), (140, 255, 255))]
     }
-
-    # Optional debug: print centroids of blobs in each mask
-    for color, mask in masks.items():
-        M = cv2.moments(mask)
-        if M["m00"] > 2000:  # area threshold
-            cx = int(M["m10"] / M["m00"])
-            cy = int(M["m01"] / M["m00"])
-            print(f"[DEBUG] Camera detected {color} blob at pixel ({cx}, {cy}) with area {M['m00']}")
-
-    # Return only masks (NumPy arrays), NOT centroids
+    
+    masks = {}
+    
+    for color, ranges in color_ranges.items():
+        mask = np.zeros(hsv.shape[:2], dtype=np.uint8)
+        for lower, upper in ranges:
+            mask |= cv2.inRange(hsv, np.array(lower), np.array(upper))
+        masks[color] = mask
+                   
     return masks
-
-
 
 def lidar_to_image_robot_frame(centroid_robot, camera_pos_rel, camera_quat_rel, intrinsics, image_shape):
     
