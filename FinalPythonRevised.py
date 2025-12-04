@@ -317,7 +317,7 @@ def update_stop_flag(sim, obstacle_info):
     return danger
 
 
-def get_path_points(sim, num_iterations=5000, inflation_amt=2):
+def get_path_points(sim, num_iterations, inflation_amt):
     goal = sim.getObjectHandle("/goal_point")
     goal_world = sim.getObjectPosition(goal, sim.handle_world)  # query the goal xyz coords in the world frame
     print(f"goal_world: {goal_world}")
@@ -393,7 +393,7 @@ if __name__ == '__main__':
     client = zmq.RemoteAPIClient()
     sim = client.getObject('sim')
     
-    path_in_world_coords_xyz = get_path_points(sim, num_iterations=num_iterations, inflation_amt=inflation_amt)
+    path_in_world_coords_xyz = get_path_points(sim, num_iterations, inflation_amt)
     
     if path_in_world_coords_xyz is None:
         print("[MAIN] No path to execute.")
@@ -402,3 +402,4 @@ if __name__ == '__main__':
         trackpoint = sim.getObjectHandle("/track_point")
         robot = sim.getObjectHandle("/Pure_Robot/Dummy")
         util.execute_path(coppelia_path,sim,trackpoint,robot,thresh=0.1)
+
