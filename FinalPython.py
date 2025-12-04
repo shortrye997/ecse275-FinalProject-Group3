@@ -20,8 +20,8 @@ inflation_amt = 2
 
 FOV_DEG = 90                               
 HALF_FOV_RAD = np.deg2rad(FOV_DEG / 2)    
-MAX_STOP_DIST = 0.6                        
-DANGER_COLOR = "red"  # color of obstacle
+MAX_STOP_DIST = 0.5                        
+DANGER_COLOR = "blue"  # color of obstacle
 
 # Establish the ZMQ connection
 client = zmq.RemoteAPIClient()
@@ -47,21 +47,31 @@ current_path_list = None
 
 state_dict = None
 
+blocked_edges = set()
+
 # One inplementation is only recognizing obstacles one road ahead of the robot
 # 
+
+found_goal = False
+
+worldmap = None
+
+travel_history = []
 
 
 def astar(grid):
     """
     
     """
+    print(f"Replanning from new start: {worldmap.start_grid_coord}")
+    
     open_set = []
     explored_set = []
     parent_table_coord = np.zeros((worldmap.norm_map.shape[0],worldmap.norm_map.shape[1],2),dtype=int) # world H x W x 2 
     ctg_table = np.zeros_like(worldmap.norm_map)
     ctc_table = np.zeros_like(worldmap.norm_map)
     #
-    blocked_edges = set()
+
     
     ''' 
     One easy way to access and modify these variables in-place in Python is to use a dictionary that we pass to other functions.
@@ -90,6 +100,7 @@ def astar(grid):
     
     path_list = None # set this to None and when the process_next_node function returns, it will update this to a non-None value
     counter = 0 # a counter to count iterations
+    
     while path_list is None and counter<num_iterations: # set the iteration threshold, and check our termination condition
         print("iteration: " + str(counter))
         path_list = process_next_node(state_dict) # keep processing nodes until we terminate
@@ -113,6 +124,20 @@ def astar(grid):
     print(f"ending_node: {ending_node}")
     while (index + 1 < index_path_dupe):
         execute_one_step(current_node, ending_node, index_path, sim, trackpoint, robot)
+        
+        #Peyten's Code
+        obstacle_list = get_obstacle_readings(
+        sim, robot, hokuyo_scripthandle, camera_handle, intrinsics)
+        
+        print("\nObstacle readings (color, angle_rad, distance_m):")
+        for obs in obstacle_list:
+            print(obs)
+            if (update_stop_flag(sim, obs)):
+                add_blocked_edge(ending_node, path_list[index_path - 3])
+                worldmap.start_grid_coord = ending_node
+                return False
+        
+        
         print(f"path_list: {path_list}")
         print(f"index_path: {index_path}")
         index_path = index_path - 1
@@ -122,18 +147,24 @@ def astar(grid):
         print(f"ending_node: {ending_node}")
         index = index + 1
         print(f"index: {index}")
-        
-        #Peyten's Code
-        obstacle_list = get_obstacle_readings(
-        sim, robot, hokuyo_scripthandle, camera_handle, intrinsics)
-        
-        print("\nObstacle readings (color, angle_rad, distance_m):")
-        for obs in obstacle_list:
-            print(obs)
+    
+    return True
+
             
     #execute_path(coppelia_path,sim,trackpoint,robot,thresh=0.1)
     
-
+def add_blocked_edge(node_a, node_b):
+    """
+    Mark the road (edge) between two grid intersections as blocked.
+    node_a, node_b: (x, y) grid coordinates of intersections.
+    """
+    global blocked_edges
+    a = tuple(node_a)
+    b = tuple(node_b)
+    blocked_edges.add((a, b))
+    blocked_edges.add((b, a))  # block both directions
+    print(f"[blocked_edges] Blocking road between {a} and {b}")
+    
 # I WILL BE USING THE GRID COORDINATES FROM (0,0) TO (8,8)
 def update(obstacle):
     """
@@ -159,7 +190,7 @@ def process_next_node(state_dict):
 
     node_to_process_coord = node_to_process_coord[:2]
     
-    explored_set.append(node_to_process_coord)
+    explored_set.append(tuple(node_to_process_coord))
     #print(f"pnn, node_to_process_coord: {node_to_process_coord}")
     goal_bool, goal_node_coord = find_neighbors(node_to_process_coord, state_dict)
     
@@ -228,6 +259,8 @@ def find_neighbors(current_node_coord,state_dict):
     # make a for loop that loops through node_list to find and explore the neighbor nodes.
     for neighbor_coord in node_list:
         #print('exploring neighbor ' + str(neighbor_coord))
+        #print(f"neighbor_coord: {neighbor_coord}")
+        #print(f"explored_set: {explored_set}")
         if neighbor_coord in explored_set or neighbor_coord in open_set: # check if we are in the explored set or the open set
             #print('already traverse. skipping...')
             pass
@@ -289,7 +322,10 @@ def trace_path(goal_node_coord,state_dict):
     
     current_node_coord = goal_node_coord # set the current_node_coord to the goal and work backwards from there
     path_list = [] # create an empty list
-    while worldmap.get_node_type_coord(current_node_coord) != 3: # while we are not at the start
+    
+    start = tuple(worldmap.start_grid_coord)  # <-- new dynamic start
+    
+    while (worldmap.get_node_type_coord(current_node_coord) != 3) and (tuple(current_node_coord) != start): # while we are not at the start
         #
         # *** DO STUFF HERE ***
         path_list.append(np.array(current_node_coord))
@@ -306,6 +342,13 @@ def trace_path(goal_node_coord,state_dict):
     return path_list
 
 def execute_one_step(start, end, index, sim,trackpoint_handle,robot_handle,thresh=0.05):
+    global travel_history
+    global state_dict
+    
+    if not travel_history:
+        travel_history.append(tuple(start))
+        
+    travel_history.append(tuple(end))
     
     path_in_world_coords_xy  = np.array(state_dict['world_map'].grid_to_world(np.array([start, end])))
     path_in_world_coords_xyz = np.hstack((path_in_world_coords_xy,np.zeros((path_in_world_coords_xy.shape[0],1))))
@@ -327,6 +370,7 @@ def execute_one_step(start, end, index, sim,trackpoint_handle,robot_handle,thres
         rob_trackpt_dist = np.linalg.norm(np.array(robot_pos)-np.array(trackpt_pos))
         timer = timer + 1
     path_index = path_index + 1
+    
 
 
 def execute_path(pathData_array,sim,trackpoint_handle,robot_handle,thresh=0.15):
@@ -399,8 +443,9 @@ def obstacle_is_dangerous(color, angle_rad, distance_m):
     """
     in_fov = abs(angle_rad) <= HALF_FOV_RAD
     in_range = distance_m <= MAX_STOP_DIST
-    is_color = (color == DANGER_COLOR)
-    return in_fov and in_range and is_color
+    #is_color = (color == DANGER_COLOR)
+    return in_fov and in_range
+    #return in_fov and in_range and is_color
 
 
 def update_stop_flag(sim, obstacle_info):
@@ -590,8 +635,32 @@ def get_obstacle_readings(sim, robot, hokuyo_scripthandle, camera_handle, intrin
     print("\n[DEBUG] obstacle_list:", obstacle_list)
     return obstacle_list
 
+def plot_travel_history(worldmap, travel_history):
+
+    if not travel_history:
+        print("[plot_travel_history] No travel history to plot.")
+        return
+
+    grid_xy = np.array([ (n[0], n[1]) for n in travel_history ])
+
+
+    world_xy = np.array(worldmap.grid_to_world(grid_xy))
+    xs = world_xy[:, 0]
+    ys = world_xy[:, 1]
+
+    plt.figure()
+
+    worldmap.plot(normalized=True)
+
+    plt.plot(xs, ys, '-o')   # robot trajectory
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.title("Robot Travel Path")
+    plt.axis('equal')
+    plt.grid(True)
+    plt.show()
+
 if __name__ == '__main__':
-    
     
     
     num_iterations = 5000 # iteration threshold
@@ -646,7 +715,6 @@ if __name__ == '__main__':
                   'ctg_table': ctg_table,
                   'ctc_table': ctc_table,
                   # NEW LINE
-                  'blocked_edges': blocked_edges
                   }
     
     robot_pos = sim.getObjectPosition(robot,sim.handle_world)
@@ -659,6 +727,10 @@ if __name__ == '__main__':
     
     worldmap.plot(normalized=True) # visualize the world map
     
-
+    while not found_goal:
+        found_goal = astar(worldmap)
+        
+    plot_travel_history(worldmap, travel_history)
     
-    astar(worldmap)
+
+        
