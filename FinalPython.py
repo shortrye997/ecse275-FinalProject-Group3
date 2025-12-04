@@ -46,6 +46,8 @@ current_path_list = None
 
 state_dict = None
 
+# One inplementation is only recognizing obstacles one road ahead of the robot
+# 
 
 
 def astar(grid):
@@ -119,25 +121,14 @@ def astar(grid):
         print(f"ending_node: {ending_node}")
         index = index + 1
         print(f"index: {index}")
+        
         #Peyten's Code
-        objects = get_range_data(sim, hokuyo_scripthandle, 'getMeasuredData')
-        img, res = get_camera_image(sim, camera_handle)
-        image_shape = img.shape[:2]
+        obstacle_list = get_obstacle_readings(
+        sim, robot, hokuyo_scripthandle, camera_handle, intrinsics)
         
-        color_masks = detect_color_blobs(img)
-        
-        camera_pose_rel = sim.getObjectPose(camera_handle, robot)
-        camera_pos_rel = np.array(camera_pose_rel[:3])
-        camera_quat_rel = np.array(camera_pose_rel[3:])
-        
-        projected = []
-        for obj in objects:
-            proj = lidar_to_image_robot_frame(obj['centroid'], camera_pos_rel, camera_quat_rel, intrinsics, image_shape)
-            projected.append(proj)
-            print(f"[DEBUG] Object at {obj['centroid']} projected to image at {proj}")
-        
-        matches = match_lidar_to_camera_with_masks(objects, projected, color_masks)
-            
+        print("\nObstacle readings (color, angle_rad, distance_m):")
+        for obs in obstacle_list:
+            print(obs)
             
     #execute_path(coppelia_path,sim,trackpoint,robot,thresh=0.1)
     
@@ -802,30 +793,27 @@ def obstacle_is_dangerous(color, angle_rad, distance_m):
     is_color = (color == DANGER_COLOR)
     return in_fov and in_range and is_color
 
-def get_range_data(sim,scripthandle,scriptfuncname,eps=0.06,min_samples=2,transform_pose=None):
-    '''
-    Parameters:
-    -----------
-    sim : object
-        The simulation object, which provides access to the simulation API.
-    
-    scriptfuncname : str
-        The name of the script function to call in the simulation environment. This function is assumed to be 
-        defined as a child script in the simulation and is expected to return range data.
-    
-    transform_pose : list or numpy array, optional
-        A 7-element pose vector representing the robot's position and orientation in the world frame.
-        The first 3 elements are the position (x, y, z), and the remaining 4 elements are the orientation 
-        as a quaternion (qx, qy, qz, qw). If provided, the retrieved range data is transformed from the robot's 
-        local frame to the world frame using this pose.
-    
+
+def update_stop_flag(sim, obstacle_info):
+    """
+    Sets 'stopFlag' in CoppeliaSim:
+      1 -> STOP
+      0 -> GO
     Returns:
-    --------
-    output_robotframe : numpy array
-        A numpy array of shape (n, 3) containing the range data points, either in the robot's local frame 
-        or transformed to the world frame if a transformation pose is provided.
-        Each row represents a point in 3D space (x, y, z).
-    '''
+      danger (bool)
+    """
+    
+    if obstacle_info is None:
+        sim.setInt32Signal('stopFlag', 0)
+        return False
+
+    color, angle_rad, distance_m = obstacle_info
+    danger = obstacle_is_dangerous(color, angle_rad, distance_m)
+    sim.setInt32Signal('stopFlag', 1 if danger else 0)
+    return danger
+
+def get_range_data(sim,scripthandle,scriptfuncname,eps=0.06,min_samples=2,transform_pose=None):
+
     
     output = sim.callScriptFunction(scriptfuncname, scripthandle)
     try:
@@ -950,6 +938,49 @@ def match_lidar_to_camera_with_masks(lidar_objects, projected_points, color_mask
     return matches
 
 
+def get_obstacle_readings(sim, robot, hokuyo_scripthandle, camera_handle, intrinsics):
+    """
+    High-level helper:
+    Runs LiDAR + camera, matches clusters to colors, and returns a list of
+    (color_str, angle_rad, distance_m) tuples for each detected object.
+
+    This is perfect to feed into obstacle_is_dangerous(color, angle, distance).
+    """
+    objects = get_range_data(sim, hokuyo_scripthandle, 'getMeasuredData')
+    if len(objects) == 0:
+        return []  # no obstacles
+
+    img, res = get_camera_image(sim, camera_handle)
+    image_shape = img.shape[:2]
+    color_masks = detect_color_blobs(img)
+
+    camera_pose_rel = sim.getObjectPose(camera_handle, robot)
+    camera_pos_rel = np.array(camera_pose_rel[:3])
+    camera_quat_rel = np.array(camera_pose_rel[3:])
+
+    projected = []
+    for obj in objects:
+        proj = lidar_to_image_robot_frame(
+            obj['centroid'], camera_pos_rel, camera_quat_rel, intrinsics, image_shape
+        )
+        projected.append(proj)
+        print(f"[DEBUG] Object at {obj['centroid']} projected to image at {proj}")
+
+    matches = match_lidar_to_camera_with_masks(objects, projected, color_masks)
+
+    # Build a clean list of (color, angle, distance)
+    obstacle_list = []
+    print("\nFINAL MATCHES:")
+    for i, color in matches:
+        obj = objects[i]
+        print(f"Object {i+1} → Dist={obj['distance']:.2f}m Angle={np.degrees(obj['angle']):.1f}° → Color={color}")
+        obstacle_list.append(
+            (color, obj['angle'], obj['distance'])  # (color_str, angle_rad, distance_m)
+        )
+
+    print("\n[DEBUG] obstacle_list:", obstacle_list)
+    return obstacle_list
+
 if __name__ == '__main__':
     
     
@@ -1056,7 +1087,7 @@ if __name__ == '__main__':
     cx, cy = 128, 128
     intrinsics = (fx, fy, cx, cy)
     
-    objects = get_range_data(sim, hokuyo_scripthandle, 'getMeasuredData')
+    #objects = get_range_data(sim, hokuyo_scripthandle, 'getMeasuredData')
     
     #Initialize the Grid Map
     worldmap = util.gridmap(sim,5.0,goal_world,start_world,inflate_iter=inflation_amt)
@@ -1121,5 +1152,4 @@ if __name__ == '__main__':
     # trackpoint = sim.getObjectHandle("/track_point")
     # util.execute_path(coppelia_path,sim,trackpoint,robot,thresh=0.1)
     
-
     astar(worldmap)
