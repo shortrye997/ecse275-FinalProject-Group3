@@ -29,7 +29,7 @@ Our project is inspired by the challenges of self-driving smart cars. With an un
 
 In our project, we look to simulate this concept using various ECSE275 robotics concepts. The two we will focus on will be utilizing robot vision, to add a level of complexity in identifying the robot's surroundings, as well as A-Star but in a more reactive context as well as map-based planning.
 
-==Summarize the final deliverable (i.e. what you will eventually demo)==
+Summarize the final deliverable (i.e. what you will eventually demo)
 
 ### Approach
 We had four main building blocks that build up our system. Sensors, A-Star, Robot Logic, and Obstacle Logic. A-Star was the basis of our project. It dictated the innitial position and movement of the robot. The sensor system would then analyse the world and continuously pass color, distance, and angle data to Obstacle Logic. Obstacle Logic would then determine what sets of data were relevant to act upon, which when true, would pass information to Robot Logic which will change the robot's behavior, which can be generalized to avoiding obstacles and moving to a point optimal for a new path. It would then rerun A-Star with taking into acount of the obstacle it encountered, which means Robot Logic is passing the new situation to A-Star, which will re-run and set the robot on a new course. 
