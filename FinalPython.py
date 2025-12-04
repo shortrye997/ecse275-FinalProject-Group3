@@ -9,6 +9,9 @@ import coppeliasim_zmqremoteapi_client as zmq
 import matplotlib.pyplot as plt
 import numpy as np
 import finalprojectutils as util
+from scipy.spatial.transform import Rotation as R
+from sklearn.cluster import DBSCAN
+
 
 num_iterations = 5000 # iteration threshold
 inflation_amt = 2
@@ -92,11 +95,31 @@ def astar(grid):
     
     # this should take your path list and generate the path in coppelia sim
     #path_in_world_coords_xy  = np.array(state_dict['world_map'].get_world_coords(np.array(path_list)))
-    path_in_world_coords_xy  = np.array(state_dict['world_map'].grid_to_world(np.array(path_list)))
-    path_in_world_coords_xyz = np.hstack((path_in_world_coords_xy,np.zeros((path_in_world_coords_xy.shape[0],1))))
-    coppelia_path = util.generate_path_from_trace(sim, path_in_world_coords_xyz)
+    
+    # path_in_world_coords_xy  = np.array(state_dict['world_map'].grid_to_world(np.array(path_list)))
+    # path_in_world_coords_xyz = np.hstack((path_in_world_coords_xy,np.zeros((path_in_world_coords_xy.shape[0],1))))
+    # coppelia_path = util.generate_path_from_trace(sim, path_in_world_coords_xyz)
     trackpoint = sim.getObjectHandle("/track_point")
-    util.execute_path(coppelia_path,sim,trackpoint,robot,thresh=0.1)
+    index_path = len(path_list)
+    index_path_dupe = index_path
+    index = 0
+    current_node = path_list[index_path - 1]
+    ending_node = path_list[index_path - 2]
+    print(f"current_node: {current_node}")
+    print(f"ending_node: {ending_node}")
+    while (index + 1 < index_path_dupe):
+        execute_one_step(current_node, ending_node, index_path, sim, trackpoint, robot)
+        print(f"path_list: {path_list}")
+        print(f"index_path: {index_path}")
+        index_path = index_path - 1
+        current_node = path_list[index_path - 1]
+        ending_node = path_list[index_path - 2]
+        print(f"current_node: {current_node}")
+        print(f"ending_node: {ending_node}")
+        index = index + 1
+        print(f"index: {index}")
+        get_range_data(sim, hokuyo_scripthandle, 'getMeasuredData')
+    #execute_path(coppelia_path,sim,trackpoint,robot,thresh=0.1)
     
 
 # I WILL BE USING THE GRID COORDINATES FROM (0,0) TO (8,8)
@@ -633,6 +656,91 @@ def trace_path(goal_node_coord,state_dict):
     print(f"path_list: {path_list}")
     return path_list
 
+def execute_one_step(start, end, index, sim,trackpoint_handle,robot_handle,thresh=0.05):
+    
+    path_in_world_coords_xy  = np.array(state_dict['world_map'].grid_to_world(np.array([start, end])))
+    path_in_world_coords_xyz = np.hstack((path_in_world_coords_xy,np.zeros((path_in_world_coords_xy.shape[0],1))))
+    coppelia_path = util.generate_path_from_trace(sim, path_in_world_coords_xyz)
+    path_index = 1
+    timer = 0
+    
+    target_point = coppelia_path[-path_index,:]
+    if any(np.isnan(target_point)):
+        target_point[3:] = [0.0,0.0,0.0,1.0]
+    sim.setObjectPose(trackpoint_handle,sim.handle_world, target_point.tolist())
+    print(f"target_point.tolist(): {target_point.tolist()}")
+    rob_trackpt_dist = 100
+    while (rob_trackpt_dist > thresh):
+        robot_pos = sim.getObjectPosition(robot_handle,sim.handle_world)
+        trackpt_pos = sim.getObjectPosition(trackpoint_handle,sim.handle_world)
+        #print(f"robot_pos: {robot_pos}")
+        #print(f"trackpt_pos: {trackpt_pos}")
+        rob_trackpt_dist = np.linalg.norm(np.array(robot_pos)-np.array(trackpt_pos))
+        timer = timer + 1
+    path_index = path_index + 1
+
+# def execute_one_step(pathData_array, index, sim,trackpoint_handle,robot_handle,thresh=0.05):
+#     timer = 0
+#     target_point = pathData_array[-index,:]
+#     if any(np.isnan(target_point)):
+#         target_point[3:] = [0.0,0.0,0.0,1.0]
+#     sim.setObjectPose(trackpoint_handle,sim.handle_world, target_point.tolist())
+#     print(f"target_point.tolist(): {target_point.tolist()}")
+#     rob_trackpt_dist = 100
+#     while (rob_trackpt_dist > thresh):
+#         robot_pos = sim.getObjectPosition(robot_handle,sim.handle_world)
+#         trackpt_pos = sim.getObjectPosition(trackpoint_handle,sim.handle_world)
+#         #print(f"robot_pos: {robot_pos}")
+#         #print(f"trackpt_pos: {trackpt_pos}")
+#         rob_trackpt_dist = np.linalg.norm(np.array(robot_pos)-np.array(trackpt_pos))
+#         timer = timer + 1
+
+def execute_path(pathData_array,sim,trackpoint_handle,robot_handle,thresh=0.15):
+    """
+    Executes the path by moving the robot through the points specified in the path data array.
+    
+    Parameters:
+    pathData_array (numpy array): Array of Nx7 path points to follow.
+    sim (object): The simulation environment instance.
+    trackpoint_handle (int): Handle to the tracking point object.
+    robot_handle (int): Handle to the robot object.
+    thresh (float, optional): Threshold distance to the next point before switching (default is 0.1).
+    
+    While the robot is moving:
+    - Sets the track point position to the next point in the path.
+    - Gets the current robot position and compares it to the track point.
+    - If the robot is within the threshold distance to the track point, moves to the next path point.
+    """
+    path_index = 1
+    timer = 0
+    while path_index<=pathData_array.shape[0]:
+        # set the track point pos
+        target_point = pathData_array[-path_index,:]
+        #print(f"target_point: {target_point}")
+        if any(np.isnan(target_point)):
+            target_point[3:] = [0.0,0.0,0.0,1.0]
+        sim.setObjectPose(trackpoint_handle,sim.handle_world,list(pathData_array[-path_index,:]))
+        #obstacle_list = get_range_data()
+        #if ():
+        #    update()
+        print(list(pathData_array[-path_index,:]))
+        # get the current robot position
+        robot_pos = sim.getObjectPosition(robot_handle,sim.handle_world)
+        trackpt_pos = sim.getObjectPosition(trackpoint_handle,sim.handle_world)
+        print(f"robot_pos: {robot_pos}")
+        print(f"trackpt_pos: {trackpt_pos}")
+        # compute the distance between the trackpt position and the robot
+        rob_trackpt_dist = np.linalg.norm(np.array(robot_pos)-np.array(trackpt_pos))
+        #print(f"execute_path rob_trackpt_dist: {rob_trackpt_dist}")
+        
+        if (rob_trackpt_dist < thresh) or (timer > 40):
+            path_index = path_index + 1
+            print("next_point")
+            timer = 0
+            
+        else:
+            timer = timer + 1
+
 def world_to_grid(point_world):
     """
     Parameters
@@ -692,6 +800,70 @@ def update_stop_flag(sim, obstacle_info):
     danger = obstacle_is_dangerous(color, angle_rad, distance_m)
     sim.setInt32Signal('stopFlag', 1 if danger else 0)
     return danger
+
+def get_range_data(sim,scripthandle,scriptfuncname,eps=0.06,min_samples=2,transform_pose=None):
+    '''
+    Parameters:
+    -----------
+    sim : object
+        The simulation object, which provides access to the simulation API.
+    
+    scriptfuncname : str
+        The name of the script function to call in the simulation environment. This function is assumed to be 
+        defined as a child script in the simulation and is expected to return range data.
+    
+    transform_pose : list or numpy array, optional
+        A 7-element pose vector representing the robot's position and orientation in the world frame.
+        The first 3 elements are the position (x, y, z), and the remaining 4 elements are the orientation 
+        as a quaternion (qx, qy, qz, qw). If provided, the retrieved range data is transformed from the robot's 
+        local frame to the world frame using this pose.
+    
+    Returns:
+    --------
+    output_robotframe : numpy array
+        A numpy array of shape (n, 3) containing the range data points, either in the robot's local frame 
+        or transformed to the world frame if a transformation pose is provided.
+        Each row represents a point in 3D space (x, y, z).
+    '''
+    
+    output = sim.callScriptFunction(scriptfuncname, scripthandle)
+    try:
+        points = np.array(output).reshape((-1,3))
+    except:
+        points = np.zeros((0,3))
+        
+    print(f"[DEBUG] Number of LiDAR points read: {len(points)}")
+    if len(points) ==0:
+        return[]
+    
+    db = DBSCAN(eps=eps, min_samples=min_samples).fit(points[:, :2])
+    labels = db.labels_
+    unique_labels = set(labels)
+    print(f"[DEBUG] Unique DBSCAN labels found: {unique_labels}")
+    
+    unique_labels.discard(-1)
+    
+    print(f"[DEBUG] Number of clusters detected: {len(unique_labels)}")
+    
+    objects = []
+    for label in unique_labels:
+        cluster_points = points[labels == label]
+        print(f"\n[DEBUG] Cluster {label} has {len(cluster_points)} points")
+        print("        Sample points:\n", cluster_points[:3])
+        
+        centroid = cluster_points.mean(axis=0)
+        distance = np.linalg.norm(centroid[:2])
+        angle = np.arctan2(centroid[1], centroid[0])
+        
+        print(f"        Centroid: {centroid}")
+        print(f"        Distance: {distance:.3f} m")
+        print(f"        Angle: {np.degrees(angle):.1f}°")
+       
+        objects.append(cluster_points, centroid, distance, angle)
+    
+    print("\n[DEBUG] Final number of objects returned:", len(objects))
+    
+    return objects
 
 if __name__ == '__main__':
     
@@ -791,7 +963,11 @@ if __name__ == '__main__':
     
     
     trackpoint = sim.getObjectHandle("/track_point")
-
+    
+    hokuyo_scripthandle = sim.getObject('/hoku_script')
+    camera_handle = sim.getObject("/Pure_Robot/visionSensor")
+    
+    
     #Initialize the Grid Map
     worldmap = util.gridmap(sim,5.0,goal_world,start_world,inflate_iter=inflation_amt)
 
