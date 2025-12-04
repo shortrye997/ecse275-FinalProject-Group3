@@ -42,14 +42,20 @@ When it comes to "seeing" the world around the robot, we do not have the resourc
 <img width="1320" height="810" alt="image" src="https://github.com/user-attachments/assets/37c0f7a7-bd27-4fad-8246-e8959ac0c0df" />
 
 ### Vision & Lidar Sensor
+Vision and Lidar sensor obtains an obstable's color, distance, and angle based on the robot. Both are front facing, meaning it cannot identify obstac;es behind or to the sides. All of this data is combined to a list and sent to path planning as needed for the obstacle logic.
 
-
-<img width="800" height="810" alt="image" src="images/astar.png" />
+<img width="800" height="810" alt="image" src="images/vision_lidar.png" />
 
 ### A* Algorithm Path Planning
 A* algorithm has paths that it can only take in an 8x8 grid where each intersection is a possible node for the robot to go towards until it reaches the goal point. If encountering a roadblock (blue) or person (red), it will assume the path towards the obstacle is cut off and reruns the algorithm to essentially go down a different direction. Any buildings (green) should be ignored. 
 
 <img width="800" height="810" alt="image" src="images/astar.png" />
+
+### Obstacle Courses
+| | | |
+|:-------------------------:|:-------------------------:|:-------------------------:|
+|<img width="500" alt="screen shot 2017-08-07 at 12 18 15 pm" src="https://user-images.githubusercontent.com/297678/29892310-03e92256-8d83-11e7-9b58-986dcb6f702e.png">  blah |  <img width="500" alt="screen shot 2017-08-07 at 12 18 15 pm" src="https://user-images.githubusercontent.com/297678/29892310-03e92256-8d83-11e7-9b58-986dcb6f702e.png">|
+|<img width="500" alt="screen shot 2017-08-07 at 12 18 15 pm" src="https://user-images.githubusercontent.com/297678/29892310-03e92256-8d83-11e7-9b58-986dcb6f702e.png">|<img width="500" alt="screen shot 2017-08-07 at 12 18 15 pm" src="https://user-images.githubusercontent.com/297678/29892310-03e92256-8d83-11e7-9b58-986dcb6f702e.png">|
 
 ### Difficulties & Issues
 * Obstacle Retention
@@ -58,7 +64,7 @@ A* algorithm has paths that it can only take in an 8x8 grid where each intersect
 * Vision Sensor & Lidar Integration
   * Although we could get the color, distance, and angle of object fairly straightfoward; we encountered difficulty in properly combining and creating the correct obstacle logic to enact upon said obstacle data
 * Movement Stability
-  * Whenever the robot moves, it will initially rock back-and-forth until stabilizing on the path
+  * Whenever the robot moves, it will initially rock back-and-forth until stabilizing on the path. Especially noticable after every turn
 
 ### Results
 
