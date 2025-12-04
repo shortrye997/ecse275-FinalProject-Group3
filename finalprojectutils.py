@@ -107,10 +107,11 @@ class gridmap:
         
         self.handle = sim.getObjectHandle(name)
         robot_handle = sim.getObjectHandle(robot_name)
-        robot_pos = sim.getObjectPosition(robot_handle,-1)
-        sim.setObjectPosition(robot_handle,-1,(100,100,100))
+        #robot_pos = sim.getObjectPosition(robot_handle,-1)
+        robot_pos = sim.getObjectPosition(robot_handle, sim.handle_world)
+        #sim.setObjectPosition(robot_handle,-1,(100,100,100))
         self.image,self.resolution = sim.getVisionSensorImg(self.handle,1)
-        sim.setObjectPosition(robot_handle,-1,robot_pos)
+        #sim.setObjectPosition(robot_handle,-1,robot_pos)
         self.gridmap = np.array(bytearray(self.image),dtype='uint8').reshape(self.resolution[0],self.resolution[1])    
         
         self.world_size = world_size
@@ -124,12 +125,23 @@ class gridmap:
         #self.goal_grid_coord = self.get_grid_coords(goal_world_coord)
         print(f"goal_world_coord: {goal_world_coord}")
         self.goal_grid_coord = self.world_to_grid(goal_world_coord)
-        print(self.goal_grid_coord)
+        self.goal_grid_coord_old = self.get_grid_coords(goal_world_coord)
+        print(f"goal_grid_coord: {self.goal_grid_coord}")
+        print(f"goal_grid_coord_old: {self.goal_grid_coord_old}")
+        bruh = int(self.goal_grid_coord[0])
+        bruh2 = int(self.goal_grid_coord[1])
         self.add_goal_coord(self.goal_grid_coord)
+        #self.add_goal_coord((bruh, bruh2, 0))
+        #self.add_goal_coord(self.goal_grid_coord_old)
         
         #self.start_grid_coord = self.get_grid_coords(start_world_coord)
         self.start_grid_coord = self.world_to_grid(start_world_coord)
+        print(f"start_grid_coord: {self.start_grid_coord}")
+        cri = int(self.start_grid_coord[0])
+        cri2 = int(self.start_grid_coord[1])
+        cri3 = int(self.start_grid_coord[2])
         self.add_start_coord(self.start_grid_coord)
+        #self.add_start_coord((cri, cri2, cri3))
         
         #goal_grid_coord and start_grid_coord, add_start_coord
     
@@ -203,42 +215,42 @@ class gridmap:
 
         
     
-    # def get_grid_coords(self,point_xyz):
-    #     """
-    #     Converts world coordinates to grid coordinates.
+    def get_grid_coords(self,point_xyz):
+        """
+        Converts world coordinates to grid coordinates.
 
-    #     Parameters:
-    #     point_xyz (tuple or array): World coordinates (x, y, z).
+        Parameters:
+        point_xyz (tuple or array): World coordinates (x, y, z).
 
-    #     Returns:
-    #     tuple: Grid coordinates.
-    #     """
-    #     # takes the x,y coordinates in from the world frame and scales it to the (x,y) coordinates of the grid world
+        Returns:
+        tuple: Grid coordinates.
+        """
+        # takes the x,y coordinates in from the world frame and scales it to the (x,y) coordinates of the grid world
         
-    #     try:
-    #         pos = np.round(np.array(point_xyz)/self.scaling+self.offset).astype(int)[:,0:2]
-    #     except:
-    #         pos = np.round(np.array(point_xyz)/self.scaling+self.offset).astype(int)[0:2]
+        try:
+            pos = np.round(np.array(point_xyz)/self.scaling+self.offset).astype(int)[:,0:2]
+        except:
+            pos = np.round(np.array(point_xyz)/self.scaling+self.offset).astype(int)[0:2]
         
-    #     return tuple(pos)
+        return tuple(pos)
         
-    # def get_world_coords(self,point_xyz):
-    #     """
-    #     Converts grid coordinates back to world coordinates.
+    def get_world_coords(self,point_xyz):
+        """
+        Converts grid coordinates back to world coordinates.
 
-    #     Parameters:
-    #     point_xyz (tuple or array): Grid coordinates (x, y, z).
+        Parameters:
+        point_xyz (tuple or array): Grid coordinates (x, y, z).
 
-    #     Returns:
-    #     tuple: World coordinates.
-    #     """
-    #     # takes the x,y coordinates from the grid world and scales it back to x,y coordinates of the world frame.
-    #     try:
-    #         pos = (np.array(point_xyz)-self.offset)*self.scaling
-    #     except:
-    #         pos = (np.array(point_xyz)-self.offset[:2])*self.scaling
+        Returns:
+        tuple: World coordinates.
+        """
+        # takes the x,y coordinates from the grid world and scales it back to x,y coordinates of the world frame.
+        try:
+            pos = (np.array(point_xyz)-self.offset)*self.scaling
+        except:
+            pos = (np.array(point_xyz)-self.offset[:2])*self.scaling
         
-    #     return tuple(pos)
+        return tuple(pos)
     
     
     def get_obs_in_world_coords(self,plot=False):
@@ -255,7 +267,9 @@ class gridmap:
         #self.obs_world = self.get_world_coords(np.hstack((obs_points,np.zeros((obs_points.shape[0],1)))))
         #self.obs_world = np.array(self.get_world_coords(obs_points))
         self.obs_world = self.grid_to_world(np.hstack((obs_points,np.zeros((obs_points.shape[0],1)))))
+        self.obs_world_old = self.get_world_coords(np.hstack((obs_points,np.zeros((obs_points.shape[0],1)))))
         print(f"self.obs_world: {self.obs_world}")
+        print(f"self.obs_world_old: {self.obs_world_old}")
         self.obs_world = np.array(self.grid_to_world(obs_points))
         
         if plot:
@@ -270,7 +284,9 @@ class gridmap:
         Parameters:
         goal_coord (tuple): Goal coordinates in grid space.
         """
+        print(f"goal_coord: {goal_coord}")
         goal_idx = coord_to_index(goal_coord)
+        print(f"goal_idx: {goal_idx}")
         self.norm_map[goal_idx[0],goal_idx[1]] = 2
         print('goal point added at index: ' + str(goal_idx[0]) + ',' + str(goal_idx[1]))
         
@@ -281,6 +297,7 @@ class gridmap:
         Parameters:
         start_coord (tuple): Start coordinates in grid space.
         """
+        #start_idx = coord_to_index(start_coord)
         start_idx = coord_to_index(start_coord)
         self.norm_map[start_idx[0],start_idx[1]] = 3
         print('start point added at index: ' + str(start_idx[0]) + ',' + str(start_idx[1]))
@@ -471,7 +488,7 @@ def generate_path_from_trace(sim,trace_path, num_smoothing_points=100):
     
     return pathData_array
 
-def execute_path(pathData_array,sim,trackpoint_handle,robot_handle,thresh=0.1):
+def execute_path(pathData_array,sim,trackpoint_handle,robot_handle,thresh=0.15):
     """
     Executes the path by moving the robot through the points specified in the path data array.
     
@@ -488,6 +505,7 @@ def execute_path(pathData_array,sim,trackpoint_handle,robot_handle,thresh=0.1):
     - If the robot is within the threshold distance to the track point, moves to the next path point.
     """
     path_index = 1
+    timer = 0
     while path_index<=pathData_array.shape[0]:
         # set the track point pos
         target_point = pathData_array[-path_index,:]
@@ -495,16 +513,40 @@ def execute_path(pathData_array,sim,trackpoint_handle,robot_handle,thresh=0.1):
         if any(np.isnan(target_point)):
             target_point[3:] = [0.0,0.0,0.0,1.0]
         sim.setObjectPose(trackpoint_handle,sim.handle_world,list(pathData_array[-path_index,:]))
+        print(list(pathData_array[-path_index,:]))
         # get the current robot position
         robot_pos = sim.getObjectPosition(robot_handle,sim.handle_world)
+        parent = sim.getObjectParent(robot_handle)
+        robot_pos_parent = sim.getObjectPosition(robot_handle,parent)
         trackpt_pos = sim.getObjectPosition(trackpoint_handle,sim.handle_world)
+        robot_pos_grid = world_to_grid_a(robot_pos)
+        trackpt_pos_grid = world_to_grid_a(trackpt_pos)
+        print(f"robot_handle: {robot_handle}")
+        print(f"robot_pos: {robot_pos}")
+        print(f"robot_pos_parent: {robot_pos_parent}")
+        print(f"robot_pos_grid: {robot_pos_grid}")
         print(f"trackpt_pos: {trackpt_pos}")
+        print(f"trackpt_pos_grid: {trackpt_pos_grid}")
+        print(f"np.array(robot_pos): {np.array(robot_pos)}")
+        print(f"np.array(trackpt_pos): {np.array(trackpt_pos)}")
+        parent = sim.getObjectParent(trackpoint_handle)
+        print("Parent:", parent)
         # compute the distance between the trackpt position and the robot
         rob_trackpt_dist = np.linalg.norm(np.array(robot_pos)-np.array(trackpt_pos))
+        print(f"rob_trackpt_dist: {rob_trackpt_dist}")
+        print(f"rob_trackpt_dist < thresh: {rob_trackpt_dist < thresh}")
         #print(f"execute_path rob_trackpt_dist: {rob_trackpt_dist}")
-        if rob_trackpt_dist < thresh:
+        
+        if (rob_trackpt_dist < thresh) or (timer > 40):
             path_index = path_index + 1
             print("next_point")
+            timer = 0
+            
+        else:
+            timer = timer + 1
+
+def move_to_next_point(start, end):
+    
     
     """
 def execute_path_fp(path_list, sim, trackpoint_handle, robot_handle, thresh=0.1):
@@ -727,3 +769,35 @@ def plot_gradient_descent(fig,path):
     fig.plot(path[:,1],path[:,0],'-')     
     fig.plot(path[:,1],path[:,0],'.',markersize=5)    
     plt.gca().set_aspect('equal')
+    
+def world_to_grid_a(point_world):
+    """
+    Parameters
+    ----------
+    point_world : World coordinates (x,y)
+        DESCRIPTION.
+
+    Returns
+    -------
+    tuple: Grid coordinates
+    
+    Wx=2-0.5Mx
+    Wy=-2+0.5My
+
+    """
+    """
+    pos = (-point_world[0]*2 + 4, point_world[1]*2 + 4)
+    
+    return tuple(pos)
+"""
+    x, y, z = point_world  # unpack world coords
+
+    # Apply the same grid mapping to x,y
+    grid_x = int(-x * 2 + 4)
+    grid_y = int(y * 2 + 4)
+    
+    # Decide what to do with Z:
+    # Option A: keep as-is (continuous world → continuous grid)
+    grid_z = z
+
+    return (grid_x, grid_y, 0)
