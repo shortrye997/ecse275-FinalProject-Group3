@@ -47,7 +47,7 @@ When it comes to "seeing" the world around the robot, we do not have the resourc
 ## Results
 
 ### Vision & Lidar Sensor
-Vision and Lidar sensor obtains an obstable's color, distance, and angle based on the robot. Both are front facing, meaning it cannot identify obstac;es behind or to the sides. All of this data is combined to a list and sent to path planning as needed for the obstacle logic.
+Vision and Lidar sensor obtains an obstable's color, distance, and angle based on the robot. Both are front facing, meaning it cannot identify obstacles behind or to the sides. All of this data is combined to a list and sent to path planning as needed for the obstacle logic.
 
 <img width="800" height="810" alt="image" src="images/vision_lidar.png" />
 
