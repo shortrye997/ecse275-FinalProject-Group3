@@ -133,10 +133,17 @@ def astar(grid):
         for obs in obstacle_list:
             print(obs)
             if (update_stop_flag(sim, obs)):
+                # color, angle, distance = obs
+                # robot_pos = np.array(sim.getObjectPosition(robot, sim.handle_world))
+                # obs_x = robot_pos[0] + distance * np.cos(angle)
+                # obs_y = robot_pos[1] + distance * np.sin(angle)
+                # g_o = world_to_grid((obs_x, obs_y, 0))
+                # print(f"g_o: {g_o}")
+                
                 add_blocked_edge(ending_node, path_list[index_path - 3])
                 worldmap.start_grid_coord = ending_node
                 return False
-        
+
         
         print(f"path_list: {path_list}")
         print(f"index_path: {index_path}")
@@ -150,6 +157,23 @@ def astar(grid):
     
     return True
 
+def detect_obstacles(obs):
+    FOV_DEG = 300
+    color, angle, distance = obs
+    return_value = True
+    robot_pos = np.array(sim.getObjectPosition(robot, sim.handle_world))
+    obs_x = robot_pos[0] + distance * np.cos(angle)
+    obs_y = robot_pos[1] + distance * np.sin(angle)
+    g_o = world_to_grid((obs_x, obs_y, 0))
+    print(f"g_o: {g_o}")
+    if (0.4 <= obs_x % 1 <= 0.6) and not (0.3 <= obs_y % 1 <= 0.7):
+        add_blocked_edge((int(obs_x), int(obs_y)), (int(obs_x) + 1, int(obs_y)))
+        return_value = False
+    if (0.4 <= obs_y % 1 <= 0.6) and not (0.4 <= obs_x % 1 <= 0.6):
+        add_blocked_edge((int(obs_x), int(obs_y)), (int(obs_x), int(obs_y)+1))
+        return_value = False
+    
+    return return_value
             
     #execute_path(coppelia_path,sim,trackpoint,robot,thresh=0.1)
     
@@ -428,8 +452,8 @@ def world_to_grid(point_world):
     x, y, z = point_world  # unpack world coords
 
     # Apply the same grid mapping to x,y
-    grid_x = int(-x * 2 + 4)
-    grid_y = int(y * 2 + 4)
+    grid_x = -x * 2 + 4
+    grid_y = y * 2 + 4
     
     # Decide what to do with Z:
     # Option A: keep as-is (continuous world → continuous grid)
@@ -456,7 +480,7 @@ def update_stop_flag(sim, obstacle_info):
     Returns:
       danger (bool)
     """
-    
+
     if obstacle_info is None:
         sim.setInt32Signal('stopFlag', 0)
         return False
@@ -465,6 +489,8 @@ def update_stop_flag(sim, obstacle_info):
     danger = obstacle_is_dangerous(color, angle_rad, distance_m)
     sim.setInt32Signal('stopFlag', 1 if danger else 0)
     return danger
+
+        
 
 def get_range_data(sim,scripthandle,scriptfuncname,eps=0.06,min_samples=2,transform_pose=None):
 
@@ -675,8 +701,8 @@ if __name__ == '__main__':
     goal = sim.getObjectHandle("/goal_point")
     goal_world = sim.getObjectPosition(goal,sim.handle_world) # query the goal xyz coords in the world frame\
     print(f"goal_world: {goal_world}")
-    goal_world_test = world_to_grid(goal_world)
-    print(f"goal_world_test: {goal_world_test}")
+    # goal_world_test = world_to_grid(goal_world)
+    # print(f"goal_world_test: {goal_world_test}")
 
     robot = sim.getObjectHandle("/Pure_Robot/Dummy") 
     start_world = sim.getObjectPosition(robot,sim.handle_world) # output is x, y ,z
