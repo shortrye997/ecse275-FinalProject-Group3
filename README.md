@@ -39,9 +39,12 @@ We considered between using A-Star and Potential fields to reach our goal. Consi
 When it comes to "seeing" the world around the robot, we do not have the resources in CoppeliaSim to utilize sensor networks to classify different types of obstacles, such as a red traffic light or a young child crossing the road. However, to simulate this vision, we have two different obstacles with different colors and shapes. Blue will represent designed roadblocks that point cars away from blocked off areas. Red obstacles will represent more natural or nuanced obstacles, such as people, who may look different, but deserve just as much attention as roadblocks do. It would be nice if this world had just obstacles and nothing else to look for. However, that is not the case as there are always going to be other objects around. To replicate this, we then added in green blocks to represent buildings inbetween our "roads". The existance of these should not deter the robot. 
 
 <!-- What experiments did you conduct and what data did you collect to measure the performance and define success? -->
-
-
 <img width="1320" height="810" alt="image" src="https://github.com/user-attachments/assets/37c0f7a7-bd27-4fad-8246-e8959ac0c0df" />
+
+### A* Algorithm Path Planning
+A* algorithm has paths that it can only take in an 8x8 grid where each intersection is a possible node for the robot to go towards until it reaches the goal point. If encountering a roadblock (blue) or person (red), it will assume the path towards the obstacle is cut off and reruns the algorithm to essentially go down a different direction. Any buildings (green) should be ignored. 
+
+<img width="800" height="810" alt="image" src="images/astar.png" />
 
 ### Difficulties & Issues
 * Obstacle Retention
