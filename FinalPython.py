@@ -802,25 +802,6 @@ def obstacle_is_dangerous(color, angle_rad, distance_m):
     is_color = (color == DANGER_COLOR)
     return in_fov and in_range and is_color
 
-
-def update_stop_flag(sim, obstacle_info):
-    """
-    Sets 'stopFlag' in CoppeliaSim:
-      1 -> STOP
-      0 -> GO
-    Returns:
-      danger (bool)
-    """
-    
-    if obstacle_info is None:
-        sim.setInt32Signal('stopFlag', 0)
-        return False
-
-    color, angle_rad, distance_m = obstacle_info
-    danger = obstacle_is_dangerous(color, angle_rad, distance_m)
-    sim.setInt32Signal('stopFlag', 1 if danger else 0)
-    return danger
-
 def get_range_data(sim,scripthandle,scriptfuncname,eps=0.06,min_samples=2,transform_pose=None):
     '''
     Parameters:
@@ -1140,4 +1121,5 @@ if __name__ == '__main__':
     # trackpoint = sim.getObjectHandle("/track_point")
     # util.execute_path(coppelia_path,sim,trackpoint,robot,thresh=0.1)
     
+
     astar(worldmap)
