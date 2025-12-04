@@ -52,10 +52,11 @@ A* algorithm has paths that it can only take in an 8x8 grid where each intersect
 <img width="800" height="810" alt="image" src="images/astar.png" />
 
 ### Obstacle Courses
+Here are the obstacle courses created for the demo:
 | | | |
 |:-------------------------:|:-------------------------:|:-------------------------:|
-|<img width="500" alt="screen shot 2017-08-07 at 12 18 15 pm" src="https://user-images.githubusercontent.com/297678/29892310-03e92256-8d83-11e7-9b58-986dcb6f702e.png">  blah |  <img width="500" alt="screen shot 2017-08-07 at 12 18 15 pm" src="https://user-images.githubusercontent.com/297678/29892310-03e92256-8d83-11e7-9b58-986dcb6f702e.png">|
-|<img width="500" alt="screen shot 2017-08-07 at 12 18 15 pm" src="https://user-images.githubusercontent.com/297678/29892310-03e92256-8d83-11e7-9b58-986dcb6f702e.png">|<img width="500" alt="screen shot 2017-08-07 at 12 18 15 pm" src="https://user-images.githubusercontent.com/297678/29892310-03e92256-8d83-11e7-9b58-986dcb6f702e.png">|
+|<img width="500" alt="Image of blue obstacle course" src="images/course1_b.png">  Course 1 Blue |  <img width="500" alt="Image of blue and green obstacle course" src="images/course2_bg.png"> Course 2 Blue-Green|
+|<img width="500" alt="Image of blue, green and red obstacle course" src="images/course3_bgr.png"> Course 3 Blue-Green-Red|<img width="500" alt="Image of blue and red obstacle course" src="images/course4_br.png"> Course 4 Blue-Red|
 
 ### Difficulties & Issues
 * Obstacle Retention
