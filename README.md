@@ -29,7 +29,7 @@ Our project is inspired by the challenges of self-driving smart cars. With an un
 
 In our project, we look to simulate this concept using various ECSE275 robotics concepts. The two we will focus on will be utilizing robot vision, to add a level of complexity in identifying the robot's surroundings, as well as A-Star but in a more reactive context as well as map-based planning.
 
-Summarize the final deliverable (i.e. what you will eventually demo)
+Our demo will follow the smart car as it navigates through four courses: 1. Blue Obstacles Only, 2. Blue & Green Obstacles, 3. Blue & Red Obstacles, and 4. Blue, Green, & Red Obstacles
 
 ### Approach
 We had four main building blocks that build up our system: Sensors, A-Star, Robot Logic, and Obstacle Logic, with A-Star being the backbone of our project. It dictated the initial position and movement of the robot. The sensor system would then analyse the world and continuously pass color, distance, and angle data to Obstacle Logic. Obstacle Logic would then determine what sets of data were relevant to act upon, which when true, would pass information to Robot Logic which will change the robot's behavior, which can be generalized to avoiding obstacles and moving to a point optimal for a new path. It would then re-run A-Star with taking into account the obstacle it encountered, which means Robot Logic is passing the new situation to A-Star, which will re-run and set the robot on a new course. 
@@ -38,10 +38,19 @@ We considered between using A-Star and Potential fields to reach our goal. Consi
 
 When it comes to "seeing" the world around the robot, we do not have the resources in CoppeliaSim to utilize sensor networks to classify different types of obstacles, such as a red traffic light or a young child crossing the road. However, to simulate this vision, we have two different obstacles with different colors and shapes. Blue will represent designed roadblocks that point cars away from blocked off areas. Red obstacles will represent more natural or nuanced obstacles, such as people, who may look different, but deserve just as much attention as roadblocks do. It would be nice if this world had just obstacles and nothing else to look for. However, that is not the case as there are always going to be other objects around. To replicate this, we then added in green blocks to represent buildings inbetween our "roads". The existance of these should not deter the robot. 
 
-What experiments did you conduct and what data did you collect to measure the performance and define success?
+<!-- What experiments did you conduct and what data did you collect to measure the performance and define success? -->
+
 
 <img width="1320" height="810" alt="image" src="https://github.com/user-attachments/assets/37c0f7a7-bd27-4fad-8246-e8959ac0c0df" />
 
+### Difficulties & Issues
+* Obstacle Retention
+  * Whenever the robot turns left or right from a roadblock, it tends to circle around into the roadblock from a different path.
+  * The limited camera FOV, and how the code was written, does not allow the robot to identify obstacles at its sides, leading it to crash into an unknown obstacle.
+* Vision Sensor & Lidar Integration
+  * Although we could get the color, distance, and angle of object fairly straightfoward; we encountered difficulty in properly combining and creating the correct obstacle logic to enact upon said obstacle data
+* Movement Stability
+  * Whenever the robot moves, it will initially rock back-and-forth until stabilizing on the path
 
 ### Results
 
