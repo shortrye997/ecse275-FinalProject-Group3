@@ -17,6 +17,7 @@
     - Programmed LiDAR to collect angle and distance data of obstacles
     - Tested various situations of collecting LiDAR data
     - Built the robot to mount necessary sensors
+    - Implemented RGB camera to integrate color into the LiDAR return data
 + Yechan Kim:
   - Developed A-Star
     - Designed CoppeliaSim Environment and associated A-Star programming
