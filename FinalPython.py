@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Self-Driving Smart Car 
-ECSE 275 Final Project
-December 12/4/2025
+Created on Tue Nov 25 00:04:54 2025
 
-@author: Ryan Shorter, Joshua Kim, Yechan Kim, Peyten Hargraves
+@author: ched0
 """
 
 import coppeliasim_zmqremoteapi_client as zmq
@@ -13,6 +11,7 @@ import numpy as np
 import finalprojectutils as util
 from scipy.spatial.transform import Rotation as R
 from sklearn.cluster import DBSCAN
+import cv2
 
 
 num_iterations = 5000 # iteration threshold
@@ -120,7 +119,26 @@ def astar(grid):
         print(f"ending_node: {ending_node}")
         index = index + 1
         print(f"index: {index}")
-        get_range_data(sim, hokuyo_scripthandle, 'getMeasuredData')
+        #Peyten's Code
+        objects = get_range_data(sim, hokuyo_scripthandle, 'getMeasuredData')
+        img, res = get_camera_image(sim, camera_handle)
+        image_shape = img.shape[:2]
+        
+        color_masks = detect_color_blobs(img)
+        
+        camera_pose_rel = sim.getObjectPose(camera_handle, robot)
+        camera_pos_rel = np.array(camera_pose_rel[:3])
+        camera_quat_rel = np.array(camera_pose_rel[3:])
+        
+        projected = []
+        for obj in objects:
+            proj = lidar_to_image_robot_frame(obj['centroid'], camera_pos_rel, camera_quat_rel, intrinsics, image_shape)
+            projected.append(proj)
+            print(f"[DEBUG] Object at {obj['centroid']} projected to image at {proj}")
+        
+        matches = match_lidar_to_camera_with_masks(objects, projected, color_masks)
+            
+            
     #execute_path(coppelia_path,sim,trackpoint,robot,thresh=0.1)
     
 
@@ -861,11 +879,95 @@ def get_range_data(sim,scripthandle,scriptfuncname,eps=0.06,min_samples=2,transf
         print(f"        Distance: {distance:.3f} m")
         print(f"        Angle: {np.degrees(angle):.1f}°")
        
-        objects.append(cluster_points, centroid, distance, angle)
+        objects.append({
+            'points': cluster_points,
+            'centroid': centroid,
+            'distance': distance,
+            'angle': angle
+        })
     
     print("\n[DEBUG] Final number of objects returned:", len(objects))
     
     return objects
+
+def get_camera_image(sim, camera_handle):
+    img_buffer, width, height = sim.getVisionSensorCharImage(camera_handle)
+    
+    res = [width, height]
+    
+    img = np.frombuffer(img_buffer, dtype=np.uint8).reshape(res[1], res[0], 3)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    return img,res
+
+def detect_color_blobs(image):
+    hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    
+    color_ranges = {
+        "red": [((0, 100, 100), (10, 255, 255)), ((160, 100, 100), (179, 255, 255))],
+        "green": [((40, 50, 50), (80, 255, 255))],
+        "blue": [((100, 50, 50), (140, 255, 255))]
+    }
+    
+    masks = {}
+    
+    for color, ranges in color_ranges.items():
+        mask = np.zeros(hsv.shape[:2], dtype=np.uint8)
+        for lower, upper in ranges:
+            mask |= cv2.inRange(hsv, np.array(lower), np.array(upper))
+        masks[color] = mask
+                   
+    return masks
+
+def lidar_to_image_robot_frame(centroid_robot, camera_pos_rel, camera_quat_rel, intrinsics, image_shape):
+    
+    pc = centroid_robot - camera_pos_rel
+    
+    R_cam = R.from_quat(camera_quat_rel)
+    pc_cam = R_cam.inv().apply(pc)
+    
+    Xc, Yc, Zc = pc_cam
+    fx, fy, cx, cy = intrinsics
+    
+    if Zc <= 0:
+        return None
+    
+    u = int(fx * (Xc / Zc) + cx)
+    v = int(fy * (Yc / Zc) + cy)
+    
+    height, width = image_shape
+    if not (0 <= u < width and 0 <= v < height):
+        return None
+    
+    return (u,v)
+
+def match_lidar_to_camera_with_masks(lidar_objects, projected_points, color_masks, window=3):
+    matches = []
+    
+    for i, proj in enumerate(projected_points):
+        if proj is None:
+            matches.append((i, None))
+            continue
+        
+        u, v = proj
+        assigned_color = None
+        
+        for color, mask in color_masks.items():
+            found = False
+            
+            for du in range(-window, window+1):
+                for dv in range(-window, window+1):
+                    uu, vv = u + du, v + dv
+                    if 0 <= uu < mask.shape[1] and 0 <= vv < mask.shape[0]:
+                        if mask[vv, uu] > 0:
+                            assigned_color = color
+                            found = True
+                            break
+                if found: 
+                    break
+        matches.append((i, assigned_color))
+    
+    return matches
+
 
 if __name__ == '__main__':
     
@@ -969,6 +1071,11 @@ if __name__ == '__main__':
     hokuyo_scripthandle = sim.getObject('/hoku_script')
     camera_handle = sim.getObject("/Pure_Robot/visionSensor")
     
+    fx, fy = 250, 250
+    cx, cy = 128, 128
+    intrinsics = (fx, fy, cx, cy)
+    
+    objects = get_range_data(sim, hokuyo_scripthandle, 'getMeasuredData')
     
     #Initialize the Grid Map
     worldmap = util.gridmap(sim,5.0,goal_world,start_world,inflate_iter=inflation_amt)
@@ -1033,5 +1140,4 @@ if __name__ == '__main__':
     # trackpoint = sim.getObjectHandle("/track_point")
     # util.execute_path(coppelia_path,sim,trackpoint,robot,thresh=0.1)
     
-
     astar(worldmap)
