@@ -26,14 +26,14 @@
     - Integrated A-Star as a function by receiving data from sensors to be reactive
   - Compiled implementation of reinstating A-Star into Obstacle and Vehicle Logic
 
-### Introduction
+## Introduction
 Our project is inspired by the challenges of self-driving smart cars. With an unpredictable world around them, with so many different variables and objects to account for, how do they perform their function while effectively ensuring the safety of not only the user, but the world around them as well? Products such as Waymo, use a complex network of cameras, LiDAR sensors, radar, as well as mapping, smart software, GPS and more to effectively analyze the world around them and react accordingly. 
 
 In our project, we look to simulate this concept using various ECSE275 robotics concepts. The two we will focus on will be utilizing robot vision, to add a level of complexity in identifying the robot's surroundings, as well as A-Star but in a more reactive context as well as map-based planning.
 
 Our demo will follow the smart car as it navigates through four courses: 1. Blue Obstacles Only, 2. Blue & Green Obstacles, 3. Blue & Red Obstacles, and 4. Blue, Green, & Red Obstacles
 
-### Approach
+## Approach
 We had four main building blocks that build up our system: Sensors, A-Star, Robot Logic, and Obstacle Logic, with A-Star being the backbone of our project. It dictated the initial position and movement of the robot. The sensor system would then analyse the world and continuously pass color, distance, and angle data to Obstacle Logic. Obstacle Logic would then determine what sets of data were relevant to act upon, which when true, would pass information to Robot Logic which will change the robot's behavior, which can be generalized to avoiding obstacles and moving to a point optimal for a new path. It would then re-run A-Star with taking into account the obstacle it encountered, which means Robot Logic is passing the new situation to A-Star, which will re-run and set the robot on a new course. 
 
 We considered between using A-Star and Potential fields to reach our goal. Considering the benefits and costs of map-based planning and reactive planning as applied to our goals, we ended up deciding to use A-Star, as it would better represent a car traveling through a city using GPS. However, unexpected obstacles would necessitate for the path-planning to be reactive as well, which A-Star is not. To account for this, we developed a system that would autonomously reiterate A-Star, while updating the existing map that takes into account new data. 
@@ -75,7 +75,7 @@ Here are the obstacle courses created for the demo:
 
 
 
-### Conclusion
+## Conclusion
 Overall, our project aims to replicate one of the many challenges that self-driving cars face. By utilizing various concepts explored in this class, particularly A-Star and Robot Vision, we built a simulation that represents a car traveling around a grid of roads while interacting with and taking account of various obstacles along the way. Our multiple environment represent increasingly complex and realistic environment for our robot to navigate through. Further improvements into the project would be to fix the robot's movement stability as well as greater consistency when interacting with obstacles. 
 
 
