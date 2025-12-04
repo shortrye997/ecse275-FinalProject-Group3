@@ -581,8 +581,66 @@ def update_stop_flag(sim, obstacle_info):
     return danger
 
 
+def get_path_points(sim, num_iterations=5000, inflation_amt=2):
+    goal = sim.getObjectHandle("/goal_point")
+    goal_world = sim.getObjectPosition(goal, sim.handle_world)  # query the goal xyz coords in the world frame
+    print(f"goal_world: {goal_world}")
 
+    robot = sim.getObjectHandle("/Pure_Robot/Dummy")
+    start_world = sim.getObjectPosition(robot, sim.handle_world)
 
+    #Initialize the Grid Map
+    worldmap = util.gridmap(sim,5.0,goal_world,start_world,inflate_iter=inflation_amt)
+
+    #Declare your state variables
+
+    open_set = []
+    explored_set = []
+    parent_table_coord = np.zeros((worldmap.norm_map.shape[0],worldmap.norm_map.shape[1],2),dtype=int) # world H x W x 2 
+    ctg_table = np.zeros_like(worldmap.norm_map)
+    ctc_table = np.zeros_like(worldmap.norm_map)
+    #
+    blocked_edges = set()
+
+     state_dict = {'open_set':open_set,
+                  'explored_set':explored_set,
+                  'parent_table': parent_table_coord,
+                  'world_map': worldmap, # stores the states of the node (whether start (3), goal (2), obstacle (1) or open space (0) )
+                  'ctg_table': ctg_table,
+                  'ctc_table': ctc_table,
+                  # NEW LINE
+                  'blocked_edges': blocked_edges
+                  }
+    plt.close('all') # close all previously open plotting windows
+    
+    worldmap.plot(normalized=True) # visualize the world map
+    
+    # add the start point to the open set
+    state_dict['open_set'].append(worldmap.start_grid_coord)
+    #print("open_set")
+    #print(state_dict['open_set'])
+    
+    # add the cost to come and cost to go of the start point
+    state_dict['ctg_table'][util.coord_to_index(worldmap.start_grid_coord)] = cost_to_go(worldmap.start_grid_coord,worldmap.goal_grid_coord)
+    state_dict['ctc_table'][util.coord_to_index(worldmap.start_grid_coord)] = 0
+    
+    path_list = None # set this to None and when the process_next_node function returns, it will update this to a non-None value
+    counter = 0 # a counter to count iterations
+    while path_list is None and counter<num_iterations: # set the iteration threshold, and check our termination condition
+        print("iteration: " + str(counter))
+        path_list = process_next_node(state_dict) # keep processing nodes until we terminate
+        counter = counter + 1
+    # I COMMENTED THIS OUT
+    print(f"plot_current_state: explored_set: {explored_set}")
+    state_dict['world_map'].plot_current_state(explored_set,open_set,path_list)
+
+    # this should take your path list and generate the path in coppelia sim
+    #path_in_world_coords_xy  = np.array(state_dict['world_map'].get_world_coords(np.array(path_list)))
+    path_in_world_coords_xy  = np.array(state_dict['world_map'].grid_to_world(np.array(path_list)))
+    path_in_world_coords_xyz = np.hstack((path_in_world_coords_xy,np.zeros((path_in_world_coords_xy.shape[0],1))))
+
+    return path_in_world_coords_xyz
+    
 if __name__ == '__main__':
     
     
@@ -666,71 +724,12 @@ if __name__ == '__main__':
     # Establish the ZMQ connection
     client = zmq.RemoteAPIClient()
     sim = client.getObject('sim')
-
-    #Get data about robot start and goal coords
     
-    goal = sim.getObjectHandle("/goal_point")
-    goal_world = sim.getObjectPosition(goal,sim.handle_world) # query the goal xyz coords in the world frame
-    print(f"goal_world: {goal_world}")
-
-    robot = sim.getObjectHandle("/Pure_Robot/Dummy") 
-    start_world = sim.getObjectPosition(robot,sim.handle_world) # output is x, y ,z
-
-    #Initialize the Grid Map
-    worldmap = util.gridmap(sim,5.0,goal_world,start_world,inflate_iter=inflation_amt)
-
-    #Declare your state variables
-
-    open_set = []
-    explored_set = []
-    parent_table_coord = np.zeros((worldmap.norm_map.shape[0],worldmap.norm_map.shape[1],2),dtype=int) # world H x W x 2 
-    ctg_table = np.zeros_like(worldmap.norm_map)
-    ctc_table = np.zeros_like(worldmap.norm_map)
-    #
-    blocked_edges = set()
+    path_in_world_coords_xyz = get_path_points(sim, num_iterations=num_iterations,
+                                               inflation_amt=inflation_amt)
     
-    ''' 
-    One easy way to access and modify these variables in-place in Python is to use a dictionary that we pass to other functions.
-    '''
-    
-    state_dict = {'open_set':open_set,
-                  'explored_set':explored_set,
-                  'parent_table': parent_table_coord,
-                  'world_map': worldmap, # stores the states of the node (whether start (3), goal (2), obstacle (1) or open space (0) )
-                  'ctg_table': ctg_table,
-                  'ctc_table': ctc_table,
-                  # NEW LINE
-                  'blocked_edges': blocked_edges
-                  }
-    
-    plt.close('all') # close all previously open plotting windows
-    
-    worldmap.plot(normalized=True) # visualize the world map
-    
-    # add the start point to the open set
-    state_dict['open_set'].append(worldmap.start_grid_coord)
-    #print("open_set")
-    #print(state_dict['open_set'])
-    
-    # add the cost to come and cost to go of the start point
-    state_dict['ctg_table'][util.coord_to_index(worldmap.start_grid_coord)] = cost_to_go(worldmap.start_grid_coord,worldmap.goal_grid_coord)
-    state_dict['ctc_table'][util.coord_to_index(worldmap.start_grid_coord)] = 0
-    
-    path_list = None # set this to None and when the process_next_node function returns, it will update this to a non-None value
-    counter = 0 # a counter to count iterations
-    while path_list is None and counter<num_iterations: # set the iteration threshold, and check our termination condition
-        print("iteration: " + str(counter))
-        path_list = process_next_node(state_dict) # keep processing nodes until we terminate
-        counter = counter + 1
-    # I COMMENTED THIS OUT
-    print(f"plot_current_state: explored_set: {explored_set}")
-    state_dict['world_map'].plot_current_state(explored_set,open_set,path_list) # this plotting code can help you check the state of your exploration algorithm.
-    
-    # this should take your path list and generate the path in coppelia sim
-    #path_in_world_coords_xy  = np.array(state_dict['world_map'].get_world_coords(np.array(path_list)))
-    path_in_world_coords_xy  = np.array(state_dict['world_map'].grid_to_world(np.array(path_list)))
-    path_in_world_coords_xyz = np.hstack((path_in_world_coords_xy,np.zeros((path_in_world_coords_xy.shape[0],1))))
     coppelia_path = util.generate_path_from_trace(sim, path_in_world_coords_xyz)
     trackpoint = sim.getObjectHandle("/track_point")
-
+    robot = sim.getObjectHandle("/Pure_Robot/Dummy")
     util.execute_path(coppelia_path,sim,trackpoint,robot,thresh=0.1)
+
