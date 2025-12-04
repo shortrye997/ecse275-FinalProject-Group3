@@ -7,10 +7,10 @@ Created on Wed Dec  3 15:25:41 2025
 
 import coppeliasim_zmqremoteapi_client as zmq
 import numpy as np
+from sklearn.cluster import DBSCAN
 from scipy.spatial.transform import Rotation as R
-import cv2
 
-def get_range_data(sim,scripthandle,scriptfuncname,transform_pose=None):
+def get_range_data(sim,scripthandle,scriptfuncname,eps=0.06,min_samples=2,transform_pose=None):
     '''
     Parameters:
     -----------
@@ -35,37 +35,49 @@ def get_range_data(sim,scripthandle,scriptfuncname,transform_pose=None):
         Each row represents a point in 3D space (x, y, z).
     '''
     
-    output = sim.callScriptFunction(scriptfuncname,scripthandle)
+    output = sim.callScriptFunction(scriptfuncname, scripthandle)
     try:
-        output_robotframe = np.array(output).reshape((-1,3))
+        points = np.array(output).reshape((-1,3))
     except:
-        output_robotframe = np.zeros_like(output_robotframe)
-    
-    
-    if transform_pose is not None:
+        points = np.zeros((0,3))
         
-        robot_rotmat = R.from_quat(transform_pose[3:])
-        #robot_angle = robot_rotmat.as_euler('XYZ')*180/np.pi
-        output_robotframe = robot_rotmat.apply(output_robotframe) + transform_pose[:3]
+    print(f"[DEBUG] Number of LiDAR points read: {len(points)}")
+    if len(points) ==0:
+        return[]
     
-    print(output_robotframe)
-    index = int(len(output_robotframe)/2)
+    db = DBSCAN(eps=eps, min_samples=min_samples).fit(points[:, :2])
+    labels = db.labels_
+    unique_labels = set(labels)
+    print(f"[DEBUG] Unique DBSCAN labels found: {unique_labels}")
     
-    xVal = output_robotframe[index][0]
-    yVal = output_robotframe[index][1]
+    unique_labels.discard(-1)
     
-    print(xVal)
-    print(yVal)
+    print(f"[DEBUG] Number of clusters detected: {len(unique_labels)}")
     
-    distance = ((xVal)**2 + (yVal)**2)**0.5
-    angle = np.arctan(yVal/xVal)
-    
-    print(distance)
-    print(angle)
-    
-    object_pose = [distance, angle]
+    objects = []
+    for label in unique_labels:
+        cluster_points = points[labels == label]
+        print(f"\n[DEBUG] Cluster {label} has {len(cluster_points)} points")
+        print("        Sample points:\n", cluster_points[:3])
         
-    return object_pose
+        centroid = cluster_points.mean(axis=0)
+        distance = np.linalg.norm(centroid[:2])
+        angle = np.arctan2(centroid[1], centroid[0])
+        
+        print(f"        Centroid: {centroid}")
+        print(f"        Distance: {distance:.3f} m")
+        print(f"        Angle: {np.degrees(angle):.1f}°")
+       
+        objects.append({
+            'points': cluster_points,
+            'centroid': centroid,
+            'distance': distance,
+            'angle': angle
+        })
+    
+    print("\n[DEBUG] Final number of objects returned:", len(objects))
+    
+    return objects
 
 def transform_to_camera_frame(points_robot, R_cam, t_cam):
     points_cam = (R_cam @ points_robot.T).T + t_cam.T
@@ -102,5 +114,5 @@ if __name__ == '__main__':
     robot_pose = sim.getObjectPose(robot,sim.handle_world)
     robot_pos_world = robot_pose[:3]
         
-    rangedata_worldframe = get_range_data(sim,hokuyo_scripthandle,'getMeasuredData')
+    rangedata_worldframe = get_range_data(sim,hokuyo_scripthandle,'getMeasuredData',0.06)
     
