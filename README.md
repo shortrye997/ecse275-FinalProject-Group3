@@ -41,6 +41,11 @@ When it comes to "seeing" the world around the robot, we do not have the resourc
 <!-- What experiments did you conduct and what data did you collect to measure the performance and define success? -->
 <img width="1320" height="810" alt="image" src="https://github.com/user-attachments/assets/37c0f7a7-bd27-4fad-8246-e8959ac0c0df" />
 
+### Vision & Lidar Sensor
+
+
+<img width="800" height="810" alt="image" src="images/astar.png" />
+
 ### A* Algorithm Path Planning
 A* algorithm has paths that it can only take in an 8x8 grid where each intersection is a possible node for the robot to go towards until it reaches the goal point. If encountering a roadblock (blue) or person (red), it will assume the path towards the obstacle is cut off and reruns the algorithm to essentially go down a different direction. Any buildings (green) should be ignored. 
 
