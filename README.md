@@ -4,6 +4,7 @@
 + Ryan Shorter: 
   - Obstacle Logic
     - Created and arranged obstacles in roadmap simulation in multiple different scenes
+    - Experimented with changes in environment and ensuring sucessful simulations
     - Developed logic for vehicle's interaction with obstacles
     - Programmed path-planning to reroute A-Star accounting for new obstacles
   - Project write up
