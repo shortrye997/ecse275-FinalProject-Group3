@@ -23,6 +23,7 @@
   - Developed A-Star
     - Designed CoppeliaSim Environment and associated A-Star programming
     - Integrated A-Star as a function by receiving data from sensors to be reactive
+  - Compiled implementation of reinstating A-Star into Obstacle and Vehicle Logic
 
 ### Introduction
 Our project is inspired by the challenges of self-driving smart cars. With an unpredictable world around them, with so many different variables and objects to account for, how do they perform their function while effectively ensuring the safety of not only the user, but the world around them as well? Products such as Waymo, use a complex network of cameras, LiDAR sensors, radar, as well as mapping, smart software, GPS and more to effectively analyze the world around them and react accordingly. 
